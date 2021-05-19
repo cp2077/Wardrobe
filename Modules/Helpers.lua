@@ -3,7 +3,32 @@ local AttachmentSlot = require("Modules/AttachmentSlot")
 local Helpers = {
     UnequipAllIter = nil,
     EquipAllIter = nil,
+    stashEntity = nil,
 }
+
+-- function Helpers.GetStashItems()
+--     if Helpers.stashEntity then
+--         local success, items = Game.GetTransactionSystem():GetItemList(Helpers.stashEntity)
+--
+-- 		if success then
+-- 			print('[Stash] Total Items:', #items)
+--
+-- 			for _, itemData in pairs(items) do
+-- 				print('[Stash]', Game.GetLocalizedTextByKey(Game['TDB::GetLocKey;TweakDBID'](itemData:GetID().id + '.displayName')))
+-- 			end
+-- 		end
+--     end
+-- end
+
+function GetUnderwearBottom()
+    local gameItemID = GetSingleton('gameItemID')
+    return gameItemID:FromTDBID("Items.Underwear_Basic_01_Bottom")
+end
+function GetUnderwearTop()
+    local gameItemID = GetSingleton('gameItemID')
+    return gameItemID:FromTDBID("Items.Underwear_Basic_01_Top")
+end
+
 
 function GetItemIDInSlotOfPuppet(slotName, puppet)
     local attachment = TweakDBID.new("AttachmentSlots." .. slotName)
@@ -24,6 +49,59 @@ function GetItemIDInSlot(slotName)
 
     return slot:GetItemData():GetID()
 end
+
+LastClothing = {}
+function Helpers.ResetLastClothing()
+    LastClothing = {}
+end
+function Helpers.ToggleClothing(slot, photoPuppetComponent, slot_alt_name)
+    -- some items like OUTERCHEST has alternative names like TORSO,
+    -- and they used for photo mode puppet and not always used for base player puppet.
+
+    if slot_alt_name == nil then
+        slot_alt_name = "UNDEFINED"
+    end
+
+    local hasSavedClothing = LastClothing[slot] ~= nil or LastClothing[slot_alt_name] ~= nil
+    local hasClothingInSlot = GetItemIDInSlot(slot) ~= nil or GetItemIDInSlot(slot_alt_name)
+
+    if not hasSavedClothing or hasClothingInSlot then
+        local itemInSlot = GetItemIDInSlot(slot) or GetItemIDInSlot(slot_alt_name)
+        Helpers.UnequipSlot(slot, photoPuppetComponent)
+        Helpers.UnequipSlot(slot_alt_name, photoPuppetComponent)
+        if itemInSlot ~= nil then
+            LastClothing[slot] = itemInSlot
+            LastClothing[slot_alt_name] = itemInSlot
+            Helpers.UnequipSlot(slot, photoPuppetComponent)
+            Helpers.UnequipSlot(slot_alt_name, photoPuppetComponent)
+        end
+    else
+        Helpers.EquipItem(LastClothing[slot], photoPuppetComponent)
+        Helpers.EquipItem(LastClothing[slot_alt_name], photoPuppetComponent)
+        LastClothing[slot] = nil
+        LastClothing[slot_alt_name] = nil
+    end
+
+end
+
+function Helpers.ToggleUnderwear(slot, photoPuppetComponent)
+    local ts = Game.GetTransactionSystem()
+    if slot == AttachmentSlot.UNDERWEARTOP and not Helpers.IsFemale() then
+        return
+    end
+
+    local underwear = slot == AttachmentSlot.UNDERWEARBOTTOM and GetUnderwearBottom() or GetUnderwearTop()
+
+    if GetItemIDInSlot(slot) ~= nil then
+        Helpers.UnequipSlot(slot, photoPuppetComponent)
+    else
+        if not ts:HasItem(Game.GetPlayer(), underwear) then
+            ts:GiveItem(Game.GetPlayer(), underwear, 1)
+        end
+        Helpers.EquipItem(underwear, photoPuppetComponent)
+    end
+end
+
 function GetTweakDBIDInSlot(slotName)
     local legsItemID = GetItemIDInSlot(slotName)
     if legsItemID == nil then
@@ -64,6 +142,25 @@ function Helpers.EquipItem(itemID, photoPuppetComponent)
     end
 end
 
+function GetItemIDFromStash(tweakDBID)
+    if not Helpers.stashEntity then
+        print("no stash stashEntity")
+        return nil
+    end
+    local success, items = Game.GetTransactionSystem():GetItemList(Helpers.stashEntity)
+
+    if not success then
+        print("'GetItemList' of stash did not return items")
+        return nil
+    end
+
+    for _, itemData in pairs(items) do
+        if tostring(itemData:GetID().id) == tostring(tweakDBID) then
+            return itemData:GetID()
+        end
+    end
+end
+
 function GetItemIDFromInventory(tweakDBID)
     local success, items = Game.GetTransactionSystem():GetItemList(Game.GetPlayer())
     if not success then
@@ -81,14 +178,6 @@ end
 function Helpers.IsFemale()
     local _, res = pcall(function() return Game.NameToString(Game.GetPlayer():GetResolvedGenderName()) == "Female" end)
     return res == true
-end
-
-function Sleep(n)  -- seconds
-  local t0 = os.time()
-  while os.time() - t0 <= n do end
-end
-
-function UnequipAllBegin()
 end
 
 function iter_table(t)
@@ -111,10 +200,14 @@ function UnequipAll()
 end
 
 function RequestUnequipAll()
+    Helpers.ResetLastClothing()
+
     Helpers.UnequipAllIter = iter_table(AttachmentSlot)
 end
 
 function RequestEquipAll(outfitSet)
+    Helpers.ResetLastClothing()
+
     Helpers.EquipAllIter = iter_table(outfitSet)
 end
 

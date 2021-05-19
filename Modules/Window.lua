@@ -1,5 +1,6 @@
 local Changelog = require("Modules/Changelog")
 local AttachmentSlot = require("Modules/AttachmentSlot")
+local Cron = require "Modules.Cron"
 
 local Window = {}
 
@@ -29,6 +30,16 @@ function TooltipIfHovered(text)
     end
 end
 
+function DisableButton()
+    ImGui.PushStyleColor(ImGuiCol.Button, 0.40, 0.40, 0.40, 0.8)
+    ImGui.PushStyleColor(ImGuiCol.Text, 0.50, 0.50, 0.50, 0.8)
+    ImGui.PushStyleColor(ImGuiCol.ButtonActive, 0.40, 0.40, 0.40, 0.8)
+    ImGui.PushStyleColor(ImGuiCol.ButtonHovered, 0.40, 0.40, 0.40, 0.8)
+end
+function UndisableButton()
+    ImGui.PopStyleColor(4)
+end
+
 function Window.Draw(
         outfits,
         isFemale,
@@ -38,11 +49,16 @@ function Window.Draw(
         onOutfitMove,
         onUnlockEveryItem,
         onSlotTakeOff,
+        onToggleUnderwear,
+        hasItemInSlot,
+        hasSavedToggleClothing,
         isUndressing,
         isDressing,
         isReady,
         isInInventory,
-        isInMenu)
+        isInMenu,
+        canToggleClothing
+        )
 
     ImGui.PushStyleColor(ImGuiCol.Border, 0, 0, 0, 0)
     ImGui.PushStyleColor(ImGuiCol.ScrollbarBg, 0, 0, 0, 0)
@@ -239,51 +255,113 @@ function Window.Draw(
         end
         ImGui.EndChild()
 
+        if not canToggleClothing then
+            DisableButton()
+        end
+
+
+        local listSlotsNames = {
+            [AttachmentSlot.HEAD] = "Hat",
+            [AttachmentSlot.FACE] = "Accessory",
+            [AttachmentSlot.OUTERCHEST] = "Jacket",
+            [AttachmentSlot.INNERCHEST] = "Top",
+            [AttachmentSlot.LEGS] = "Pants",
+            [AttachmentSlot.FEET] = "Shoes",
+            [AttachmentSlot.UNDERWEARBOTTOM] = "Underpants",
+            [AttachmentSlot.UNDERWEARTOP] = "Bra",
+            [AttachmentSlot.OUTFIT] = "Suit",
+        }
+        local listSlots = {
+            { AttachmentSlot.HEAD, nil }, { AttachmentSlot.FACE, AttachmentSlot.EYES },
+            { AttachmentSlot.OUTERCHEST, AttachmentSlot.TORSO }, { AttachmentSlot.INNERCHEST, AttachmentSlot.CHEST },
+            { AttachmentSlot.LEGS, nil }, { AttachmentSlot.FEET, nil },
+            { AttachmentSlot.OUTFIT, nil },
+        }
+
         -- Take Off Clothing
-        ImGui.TextWrapped("Take off:")
-        local btnWidth, btnHeight = ImGui.CalcTextSize(AttachmentSlot.UNDERWEARBOTTOM)
-
-        -- Head
-        if ImGui.Button((" %s "):format(AttachmentSlot.HEAD), btnWidth, btnHeight+4) then
-            onSlotTakeOff(AttachmentSlot.HEAD)
-        end
-        ImGui.SameLine()
-        if ImGui.Button((" %s "):format(AttachmentSlot.FACE), btnWidth, btnHeight+4) then
-            onSlotTakeOff(AttachmentSlot.FACE)
-            onSlotTakeOff(AttachmentSlot.EYES)
-        end
-
-        -- Torso
-        if ImGui.Button((" %s "):format(AttachmentSlot.OUTERCHEST), btnWidth, btnHeight+4) then
-            onSlotTakeOff(AttachmentSlot.OUTERCHEST)
-            onSlotTakeOff(AttachmentSlot.TORSO)
-        end
-        ImGui.SameLine()
-        if ImGui.Button((" %s "):format(AttachmentSlot.INNERCHEST), btnWidth, btnHeight+4) then
-            onSlotTakeOff(AttachmentSlot.INNERCHEST)
-            onSlotTakeOff(AttachmentSlot.CHEST)
-        end
-
-        -- Legs
-        if ImGui.Button((" %s "):format(AttachmentSlot.LEGS), btnWidth, btnHeight+4) then
-            onSlotTakeOff(AttachmentSlot.LEGS)
-        end
-        ImGui.SameLine()
-        if ImGui.Button((" %s "):format(AttachmentSlot.FEET), btnWidth, btnHeight+4) then
-            onSlotTakeOff(AttachmentSlot.FEET)
-        end
-
-        -- Outfit
-        if ImGui.Button((" %s "):format(AttachmentSlot.OUTFIT), btnWidth, btnHeight+4) then
-            onSlotTakeOff(AttachmentSlot.OUTFIT)
-        end
         ImGui.TextWrapped("")
+        ImGui.TextWrapped("Toggle:")
+        local btnWidth, btnHeight = ImGui.CalcTextSize((" %s "):format(" Changing "))
+
+        local function getButtonText(slot, slot_alt_name)
+            if not canToggleClothing then
+                return "Changing"
+            end
+
+            local isUnderwear = slot == AttachmentSlot.UNDERWEARBOTTOM or slot == AttachmentSlot.UNDERWEARTOP
+            if isUnderwear then
+                return "Toggle"
+            end
+
+            if hasItemInSlot(slot) or (slot_alt_name and hasItemInSlot(slot_alt_name)) then
+                return "Take off"
+            else
+                if not hasSavedToggleClothing(slot) or (slot_alt_name and not hasSavedToggleClothing(slot_alt_name)) then
+                    return "No item"
+                end
+                return "Put on"
+            end
+        end
+
+        local function hasItemToTakeOff(slot)
+            if slot == nil then
+                return false
+            end
+            return hasItemInSlot(slot) or hasSavedToggleClothing(slot)
+        end
+
+        for index, sl in pairs(listSlots) do
+            local slot = sl[1]
+            local slot_alt_name = sl[2]
+            local hasItemToToggle = hasItemToTakeOff(slot) or hasItemToTakeOff(slot_alt_name)
+            if not hasItemToToggle then
+                DisableButton()
+            end
+
+            ImGui.PushID(tostring(index) .. slot)
+            if ImGui.Button(getButtonText(slot, slot_alt_name), btnWidth, btnHeight+4) and canToggleClothing and hasItemToToggle then
+                onSlotTakeOff(slot, slot_alt_name)
+            end
+            ImGui.PopID()
+            if not hasItemToToggle then
+                UndisableButton()
+            end
+            ImGui.SameLine()
+            ImGui.TextWrapped(listSlotsNames[slot])
+        end
+
+        -- UnderwearTop
+        if isFemale then
+            ImGui.PushID("underweartop")
+            if ImGui.Button(getButtonText(AttachmentSlot.UNDERWEARTOP), btnWidth, btnHeight+4) and canToggleClothing then
+                onToggleUnderwear(AttachmentSlot.UNDERWEARTOP)
+            end
+            ImGui.PopID()
+            ImGui.SameLine()
+            ImGui.TextWrapped(listSlotsNames[AttachmentSlot.UNDERWEARTOP])
+            ImGui.SameLine()
+            ImGui.SmallButton("!")
+            TooltipIfHovered("Prone to clipping")
+        end
+
+        -- UnderwearBottom
+        ImGui.PushID("underwearbottom")
+        if ImGui.Button(getButtonText(AttachmentSlot.UNDERWEARBOTTOM), btnWidth, btnHeight+4) and canToggleClothing then
+            onToggleUnderwear(AttachmentSlot.UNDERWEARBOTTOM)
+        end
+        ImGui.PopID()
+        ImGui.SameLine()
+        ImGui.TextWrapped(listSlotsNames[AttachmentSlot.UNDERWEARBOTTOM])
+
+        ImGui.TextWrapped("")
+        if not canToggleClothing then
+            UndisableButton()
+        end
 
         -- Unlock unequipment of quest items
         if ImGui.Button("Unlock unequipment of quest items.") then
             onUnlockEveryItem()
         end
-
         TooltipIfHovered("Allows you to unequip certain quest items that are normally can not be unequipped (e.g. suit during The Heist)")
     end
 

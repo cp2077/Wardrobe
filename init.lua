@@ -10,9 +10,11 @@ local Helpers = require("Modules/Helpers")
 local Config = require("Modules/Config")
 local Window = require("Modules/Window")
 local Cron = require("Modules/Cron")
+local AttachmentSlot = require("Modules/AttachmentSlot")
 
 local isReady = false
 local isInited = false
+local lastToggled = 0
 function SetReady(ready) isReady = ready end
 function IsReady() return isReady end
 
@@ -137,6 +139,14 @@ local photoPuppetComponent = nil
 
 function Wardrobe:Init()
     registerForEvent("onInit", function ()
+
+        -- Observe('Stash', 'GetDevicePS', function(self)
+        --     print("GetDevicePS")
+        --     if self:GetEntityID().hash == 16570246047455160070ULL then
+        --         Helpers.stashEntity = Game.FindEntityByID(self:GetEntityID())
+        --     end
+        -- end)
+
         Observe("gameuiMenuItemListGameController", "OnInitialize", function()
             isInMenu = true
         end)
@@ -144,6 +154,7 @@ function Wardrobe:Init()
             isInMenu = false
         end)
         Observe('RadialWheelController', 'RegisterBlackboards', function(_, loaded)
+            Helpers.ResetLastClothing()
             SetReady(loaded)
         end)
         Observe('gameuiInventoryGameController', 'OnInitialize', function()
@@ -175,6 +186,11 @@ function Wardrobe:Init()
         Cron.Every(0.12, { tick = 1 }, function()
             if Helpers.UnequipAllIter ~= nil then
                 local called =  Helpers.UnequipAllIter(function(slotName)
+                    -- we don't have to take off underwear when undressing
+                    if slotName == AttachmentSlot.UNDERWEARTOP or slotName == AttachmentSlot.UNDERWEARBOTTOM then
+                        return
+                    end
+
                     Helpers.UnequipSlot(slotName, photoPuppetComponent)
                 end)
                 if not called then
@@ -182,6 +198,10 @@ function Wardrobe:Init()
                 end
             elseif Helpers.EquipAllIter ~= nil then
                 local called =  Helpers.EquipAllIter(function(slot)
+                    if slot == AttachmentSlot.UNDERWEARTOP or slot == AttachmentSlot.UNDERWEARBOTTOM then
+                        return
+                    end
+
                     local desTweakDBID = DeserializeTweakDB(slot.serTweakDBID)
                     local itemID = GetItemIDFromInventory(desTweakDBID)
 
@@ -227,9 +247,16 @@ function Wardrobe:Init()
             MoveOutfit(id, offset)
         end
 
-        local function onSlotTakeOff(slot)
-            Helpers.UnequipSlot(slot, photoPuppetComponent)
+        local function onSlotTakeOff(slot, alt_name)
+            Helpers.ToggleClothing(slot, photoPuppetComponent, alt_name)
+            lastToggled = Game.GetEngineTime():ToFloat(Game.GetEngineTime())
         end
+
+        local function onToggleUnderwear(slot)
+            Helpers.ToggleUnderwear(slot, photoPuppetComponent)
+            lastToggled = Game.GetEngineTime():ToFloat(Game.GetEngineTime())
+        end
+
 
         local function onUnlockEveryItem()
             Helpers.UnlockEveryItem()
@@ -238,6 +265,13 @@ function Wardrobe:Init()
         local isUndressing = Helpers.UnequipAllIter ~= nil
         local isDressing = Helpers.EquipAllIter ~= nil
 
+        local canToggleClothing = (Game.GetEngineTime():ToFloat(Game.GetEngineTime()) - lastToggled) >= 0.5
+        local function hasItemInSlot(slot)
+            return GetItemIDInSlot(slot) ~= nil
+        end
+        local function hasSavedToggleClothing(slot)
+            return LastClothing[slot] ~= nil
+        end
         Window.Draw(
             OutfitsSearched(),
             Helpers.IsFemale(),
@@ -247,11 +281,15 @@ function Wardrobe:Init()
             onOutfitMove,
             onUnlockEveryItem,
             onSlotTakeOff,
+            onToggleUnderwear,
+            hasItemInSlot,
+            hasSavedToggleClothing,
             isUndressing,
             isDressing,
             IsReady(),
             isInInventory,
-            isInMenu
+            isInMenu,
+            canToggleClothing
         )
     end)
     registerForEvent('onUpdate', function(delta)
