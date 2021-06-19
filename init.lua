@@ -249,12 +249,12 @@ function Wardrobe:Init()
 
         local function onSlotTakeOff(slot, alt_name)
             Helpers.ToggleClothing(slot, photoPuppetComponent, alt_name)
-            lastToggled = Game.GetEngineTime():ToFloat(Game.GetEngineTime())
+            lastToggled = os.time()
         end
 
         local function onToggleUnderwear(slot)
             Helpers.ToggleUnderwear(slot, photoPuppetComponent)
-            lastToggled = Game.GetEngineTime():ToFloat(Game.GetEngineTime())
+            lastToggled = os.time()
         end
 
 
@@ -265,7 +265,7 @@ function Wardrobe:Init()
         local isUndressing = Helpers.UnequipAllIter ~= nil
         local isDressing = Helpers.EquipAllIter ~= nil
 
-        local canToggleClothing = (Game.GetEngineTime():ToFloat(Game.GetEngineTime()) - lastToggled) >= 0.5
+        local canToggleClothing = (os.time() - lastToggled) >= 1
         local function hasItemInSlot(slot)
             return GetItemIDInSlot(slot) ~= nil
         end
