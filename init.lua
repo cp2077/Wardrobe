@@ -1,4 +1,4 @@
-local Wardrobe = { version = "1.4.1" }
+local Wardrobe = { version = "1.5.0" }
 
 --[[
 TODO:

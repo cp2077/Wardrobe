@@ -222,6 +222,26 @@ function Helpers.ApplyOutfit(outfit)
     return isSomeClothesAreMissing
 end
 
+function Helpers.UnlockSlot(slot)
+    local ts = Game.GetTransactionSystem()
+    local pl = Game.GetPlayer()
+    pcall(function()
+        ts:GetItemInSlot(pl, TweakDBID.new("AttachmentSlots." .. slot)):GetItemData():RemoveDynamicTag("UnequipBlocked")
+    end)
+end
+
+function Helpers.IsSlotLocked(slot)
+    local ts = Game.GetTransactionSystem()
+    local pl = Game.GetPlayer()
+    local ok, res = pcall(function()
+        return ts:GetItemInSlot(pl, TweakDBID.new("AttachmentSlots." .. slot)):GetItemData():HasTag("UnequipBlocked")
+    end)
+    if ok then
+        return res
+    end
+    return false
+end
+
 function Helpers.UnlockEveryItem()
     local ts = Game.GetTransactionSystem()
     local pl = Game.GetPlayer()

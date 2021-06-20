@@ -1,5 +1,17 @@
 return {
     {
+        ["version"] = "1.5.0",
+        ["changes"] = {
+            "Feature: More concise UI",
+        }
+    },
+    {
+        ["version"] = "1.4.1",
+        ["changes"] = {
+            "Feature: CET v1.14 support",
+        }
+    },
+    {
         ["version"] = "1.4.0",
         ["changes"] = {
             "Feature: Toggle pieces of clothes on/off (Previously you could only take them off)",
