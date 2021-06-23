@@ -1,5 +1,14 @@
 return {
     {
+        ["version"] = "1.5.1",
+        ["changes"] = {
+            "Fix: Undressing is now faster",
+            "Fix: Clothing is now changing in a natural way (e.g. jacket first, underwear last, etc)",
+            "Fix: Bra won't longer appear on top of your jacket",
+            "Fix: Underwear are now handled properly (Fully naked outfits or outfits without underpants will behave accordingly)",
+        }
+    },
+    {
         ["version"] = "1.5.0",
         ["changes"] = {
             "Feature: More concise UI",

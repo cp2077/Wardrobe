@@ -17,24 +17,36 @@ end
 local CONFIG_FILE_NAME = "config.lua"
 
 function Config.InitConfig()
-    local config = ReadConfig()
+    local config = ReadConfig(CONFIG_FILE_NAME)
     if config == nil then
-        WriteConfig()
+        WriteConfig(CONFIG_FILE_NAME)
     else
         Config.data = config
     end
+    -- Config.BackupConfig()
 end
 
 function Config.SaveConfig()
-    WriteConfig()
+    WriteConfig(CONFIG_FILE_NAME)
 end
 
-function WriteConfig()
-    local sessionPath = CONFIG_FILE_NAME
-    local sessionFile = io.open(sessionPath, 'w')
+function Config.BackupConfig()
+    WriteConfig(BackupName())
+end
+
+-- gives you a backup name prefixed with a number that changes every 30 seconds and rotates on a span of aprox 1 day.
+function BackupName()
+    local now = os.time()
+    local num = math.floor(tonumber(string.sub(tostring(math.floor(now)), 6)) / 30)
+    local name = "./config_backups/" .. CONFIG_FILE_NAME .. "." .. tostring(num)
+    return name
+end
+
+function WriteConfig(configPath)
+    local sessionFile = io.open(configPath, 'w')
 
     if not sessionFile then
-        RaiseError(('Cannot write session file %q.'):format(sessionPath))
+        RaiseError(('Cannot write session file %q.'):format(configPath))
     end
 
     sessionFile:write('return ')
@@ -42,8 +54,7 @@ function WriteConfig()
     sessionFile:close()
 end
 
-function ReadConfig()
-    local configPath = CONFIG_FILE_NAME
+function ReadConfig(configPath)
     local configChunk = loadfile(configPath)
 
     if type(configChunk) ~= 'function' then

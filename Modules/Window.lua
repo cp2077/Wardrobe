@@ -111,16 +111,16 @@ function Window.Draw(
         -- Changelog
         ImGui.Separator()
         NewLine(2)
-        ImGui.TextWrapped("# Changelog")
+        ImGui.TextWrapped("Changelog")
         NewLine(1)
         ImGui.BeginChild('ChangeLog', 433, 200)
         for _, log in pairs(Changelog) do
-            ImGui.TextWrapped("## " .. log.version)
+            ImGui.TextWrapped(" - " .. log.version)
             ImGui.PushStyleColor(ImGuiCol.Separator, 1, 1, 1, 0)
             ImGui.Separator()
             ImGui.PopStyleColor()
             for _, change in pairs(log.changes) do
-                ImGui.TextWrapped("   - " .. change)
+                ImGui.TextWrapped(change)
             end
             ImGui.TextWrapped("")
         end
@@ -368,7 +368,7 @@ function Window.Draw(
                 ImGui.TextWrapped(listSlotsNames[AttachmentSlot.UNDERWEARTOP])
                 ImGui.SameLine()
                 ImGui.SmallButton("!")
-                TooltipIfHovered("Prone to clipping")
+                TooltipIfHovered("If you have a large breast type, bra will clip through it")
             end
 
             -- UnderwearBottom

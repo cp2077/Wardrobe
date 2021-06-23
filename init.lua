@@ -1,22 +1,38 @@
-local Wardrobe = { version = "1.5.0" }
+local Wardrobe = { version = "1.5.1" }
 
 --[[
 TODO:
-1. "unlock" quest item unequipment
-2. wear clothing from stash
+1. wear clothing from stash
 ]]
 
 local Helpers = require("Modules/Helpers")
 local Config = require("Modules/Config")
 local Window = require("Modules/Window")
 local Cron = require("Modules/Cron")
-local AttachmentSlot = require("Modules/AttachmentSlot")
 
 local isReady = false
 local isInited = false
 local lastToggled = 0
 function SetReady(ready) isReady = ready end
 function IsReady() return isReady end
+
+
+local cetVer = tonumber((GetVersion():gsub('^v(%d+)%.(%d+)%.(%d+)(.*)', function(major, minor, patch, wip)
+    return ('%d.%02d%02d%d'):format(major, minor, patch, (wip == '' and 0 or 1))
+end))) or 1.12
+
+function GetEngineTime()
+    local engineTime = Game.GetEngineTime()
+    if engineTime == nil then
+        return 0
+    end
+
+    if cetVer >= 1.14 then
+        return engineTime:ToFloat()
+    else
+        return engineTime:ToFloat(engineTime)
+    end
+end
 
 local messageController = nil
 function ShowMessage(text)
@@ -135,10 +151,8 @@ local isOverlayOpen = false
 local isInInventory = false
 local isInMenu = false
 
-local photoPuppetComponent = nil
-
 function Wardrobe:Init()
-    registerForEvent("onInit", function ()
+    registerForEvent("onInit", function()
 
         -- Observe('Stash', 'GetDevicePS', function(self)
         --     print("GetDevicePS")
@@ -167,12 +181,14 @@ function Wardrobe:Init()
         end)
 
         Observe('PhotoModePlayerEntityComponent', 'ListAllItems', function(self)
-            photoPuppetComponent = self
+            Helpers.photoPuppet = self.fakePuppet
+            Helpers.photoPuppetComponent = self
             SetReady(true)
         end)
 
         Observe('gameuiPhotoModeMenuController', 'OnHide', function()
-            photoPuppetComponent = nil
+            Helpers.photoPuppet = nil
+            Helpers.photoPuppetComponent = nil
             SetReady(true)
         end)
 
@@ -183,35 +199,44 @@ function Wardrobe:Init()
         Config.InitConfig()
         isInited = true
 
-        Cron.Every(0.12, { tick = 1 }, function()
-            if Helpers.UnequipAllIter ~= nil then
-                local called =  Helpers.UnequipAllIter(function(slotName)
-                    -- we don't have to take off underwear when undressing
-                    if slotName == AttachmentSlot.UNDERWEARTOP or slotName == AttachmentSlot.UNDERWEARBOTTOM then
-                        return
-                    end
 
-                    Helpers.UnequipSlot(slotName, photoPuppetComponent)
+        Cron.Every(0.14, function()
+            local function msg()
+                ShowMessage("Outfit has been changed")
+            end
+        -- Cron.Every(0.13, function()
+            if Helpers.UnequipAllIter ~= nil then
+                local called =  Helpers.UnequipAllIter(function(item)
+                    local name = item.key
+                    local slot = item.value
+
+                    Helpers.UnequipSlot(slot)
                 end)
                 if not called then
+                    if Helpers.EquipAllIter == nil then
+                        msg()
+                    end
                     Helpers.UnequipAllIter = nil
                 end
             elseif Helpers.EquipAllIter ~= nil then
-                local called =  Helpers.EquipAllIter(function(slot)
-                    if slot == AttachmentSlot.UNDERWEARTOP or slot == AttachmentSlot.UNDERWEARBOTTOM then
-                        return
+                local called =  Helpers.EquipAllIter(function(item)
+                    local name = item.key
+                    local slot = item.value
+
+                    if name == "UNDERWEARTOP" then
+                        return Helpers.PutOnBra()
                     end
 
                     local desTweakDBID = DeserializeTweakDB(slot.serTweakDBID)
                     local itemID = GetItemIDFromInventory(desTweakDBID)
 
                     if itemID ~= nil then
-                        Helpers.EquipItem(itemID, photoPuppetComponent)
+                        Helpers.EquipItem(itemID)
                     end
                 end)
                 if not called then
                     Helpers.EquipAllIter = nil
-                    ShowMessage("Outfit has been changed")
+                    msg()
                 end
             end
         end)
@@ -248,13 +273,13 @@ function Wardrobe:Init()
         end
 
         local function onSlotTakeOff(slot, alt_name)
-            Helpers.ToggleClothing(slot, photoPuppetComponent, alt_name)
-            lastToggled = os.time()
+            Helpers.ToggleClothing(slot, alt_name)
+            lastToggled = GetEngineTime()
         end
 
         local function onToggleUnderwear(slot)
-            Helpers.ToggleUnderwear(slot, photoPuppetComponent)
-            lastToggled = os.time()
+            Helpers.ToggleUnderwear(slot)
+            lastToggled = GetEngineTime()
         end
 
 
@@ -265,13 +290,15 @@ function Wardrobe:Init()
         local isUndressing = Helpers.UnequipAllIter ~= nil
         local isDressing = Helpers.EquipAllIter ~= nil
 
-        local canToggleClothing = (os.time() - lastToggled) >= 1
+        local canToggleClothing = (GetEngineTime() - lastToggled) >= 0.5
         local function hasItemInSlot(slot)
             return GetItemIDInSlot(slot) ~= nil
         end
         local function hasSavedToggleClothing(slot)
             return LastClothing[slot] ~= nil
         end
+
+        -- TODO: these arguments are ugly
         Window.Draw(
             OutfitsSearched(),
             Helpers.IsFemale(),
@@ -296,6 +323,7 @@ function Wardrobe:Init()
         Cron.Update(delta)
     end)
 
+    -- hotkey for the first 6 outfits
     for var=1,6 do
         registerHotkey("outfit_" .. var, "Select outfit number " .. var, function()
             local isUndressing = Helpers.UnequipAllIter ~= nil

@@ -4,21 +4,9 @@ local Helpers = {
     UnequipAllIter = nil,
     EquipAllIter = nil,
     stashEntity = nil,
+    photoPuppet = nil,
+    photoPuppetComponent = nil,
 }
-
--- function Helpers.GetStashItems()
---     if Helpers.stashEntity then
---         local success, items = Game.GetTransactionSystem():GetItemList(Helpers.stashEntity)
---
--- 		if success then
--- 			print('[Stash] Total Items:', #items)
---
--- 			for _, itemData in pairs(items) do
--- 				print('[Stash]', Game.GetLocalizedTextByKey(Game['TDB::GetLocKey;TweakDBID'](itemData:GetID().id + '.displayName')))
--- 			end
--- 		end
---     end
--- end
 
 function GetUnderwearBottom()
     local gameItemID = GetSingleton('gameItemID')
@@ -30,9 +18,13 @@ function GetUnderwearTop()
 end
 
 
-function GetItemIDInSlotOfPuppet(slotName, puppet)
+function GetItemIDInSlotOfPuppet(slotName)
+    local ts = Game.GetTransactionSystem()
+    if Helpers.photoPuppet == nil or ts == nil then
+        return nil
+    end
     local attachment = TweakDBID.new("AttachmentSlots." .. slotName)
-    local slot = Game.GetTransactionSystem():GetItemInSlot(puppet, attachment)
+    local slot = ts:GetItemInSlot(Helpers.photoPuppet, attachment)
     if slot == nil then
         return nil
     end
@@ -41,8 +33,13 @@ function GetItemIDInSlotOfPuppet(slotName, puppet)
 end
 
 function GetItemIDInSlot(slotName)
+    local player = Game.GetPlayer()
+    local ts = Game.GetTransactionSystem()
+    if player == nil or ts == nil then
+        return nil
+    end
     local attachment = TweakDBID.new("AttachmentSlots." .. slotName)
-    local slot = Game.GetTransactionSystem():GetItemInSlot(Game.GetPlayer(), attachment)
+    local slot = ts:GetItemInSlot(player, attachment)
     if slot == nil then
         return nil
     end
@@ -54,7 +51,7 @@ LastClothing = {}
 function Helpers.ResetLastClothing()
     LastClothing = {}
 end
-function Helpers.ToggleClothing(slot, photoPuppetComponent, slot_alt_name)
+function Helpers.ToggleClothing(slot, slot_alt_name)
     -- some items like OUTERCHEST has alternative names like TORSO,
     -- and they used for photo mode puppet and not always used for base player puppet.
 
@@ -67,24 +64,37 @@ function Helpers.ToggleClothing(slot, photoPuppetComponent, slot_alt_name)
 
     if not hasSavedClothing or hasClothingInSlot then
         local itemInSlot = GetItemIDInSlot(slot) or GetItemIDInSlot(slot_alt_name)
-        Helpers.UnequipSlot(slot, photoPuppetComponent)
-        Helpers.UnequipSlot(slot_alt_name, photoPuppetComponent)
+        Helpers.UnequipSlot(slot)
+        Helpers.UnequipSlot(slot_alt_name)
         if itemInSlot ~= nil then
             LastClothing[slot] = itemInSlot
             LastClothing[slot_alt_name] = itemInSlot
-            Helpers.UnequipSlot(slot, photoPuppetComponent)
-            Helpers.UnequipSlot(slot_alt_name, photoPuppetComponent)
+            Helpers.UnequipSlot(slot)
+            Helpers.UnequipSlot(slot_alt_name)
         end
     else
-        Helpers.EquipItem(LastClothing[slot], photoPuppetComponent)
-        Helpers.EquipItem(LastClothing[slot_alt_name], photoPuppetComponent)
+        Helpers.EquipItem(LastClothing[slot])
+        Helpers.EquipItem(LastClothing[slot_alt_name])
         LastClothing[slot] = nil
         LastClothing[slot_alt_name] = nil
     end
 
 end
 
-function Helpers.ToggleUnderwear(slot, photoPuppetComponent)
+function Helpers.PutOnBra()
+    if not Helpers.IsFemale() then
+        return
+    end
+
+    local ts = Game.GetTransactionSystem()
+    local underwear = GetUnderwearTop()
+    if not ts:HasItem(Game.GetPlayer(), underwear) then
+        ts:GiveItem(Game.GetPlayer(), underwear, 1)
+    end
+    Helpers.EquipItem(underwear)
+end
+
+function Helpers.ToggleUnderwear(slot)
     local ts = Game.GetTransactionSystem()
     if slot == AttachmentSlot.UNDERWEARTOP and not Helpers.IsFemale() then
         return
@@ -93,12 +103,12 @@ function Helpers.ToggleUnderwear(slot, photoPuppetComponent)
     local underwear = slot == AttachmentSlot.UNDERWEARBOTTOM and GetUnderwearBottom() or GetUnderwearTop()
 
     if GetItemIDInSlot(slot) ~= nil then
-        Helpers.UnequipSlot(slot, photoPuppetComponent)
+        Helpers.UnequipSlot(slot)
     else
         if not ts:HasItem(Game.GetPlayer(), underwear) then
             ts:GiveItem(Game.GetPlayer(), underwear, 1)
         end
-        Helpers.EquipItem(underwear, photoPuppetComponent)
+        Helpers.EquipItem(underwear)
     end
 end
 
@@ -127,18 +137,21 @@ function DeserializeTweakDB(tweakDBIDTable)
     customTDBID.length = tweakDBIDTable.length
     return customTDBID
 end
-function Helpers.UnequipSlot(slotName, photoPuppetComponent)
+
+function Helpers.UnequipSlot(slotName)
     Game.UnequipItem(slotName, "0")
-    if photoPuppetComponent then
-        local itemID = GetItemIDInSlotOfPuppet(slotName, photoPuppetComponent.fakePuppet)
-        Game.GetTransactionSystem():RemoveItem(photoPuppetComponent.fakePuppet, itemID, 1)
+    if Helpers.photoPuppet then
+        local itemID = GetItemIDInSlotOfPuppet(slotName)
+        if itemID then
+            Game.GetTransactionSystem():RemoveItem(Helpers.photoPuppet, itemID, 1)
+        end
     end
 end
 
-function Helpers.EquipItem(itemID, photoPuppetComponent)
+function Helpers.EquipItem(itemID)
     Game.GetScriptableSystemsContainer():Get(CName.new("EquipmentSystem")):GetPlayerData(Game.GetPlayer()):EquipItem(itemID, false, false, false)
-    if photoPuppetComponent then
-        photoPuppetComponent:PutOnFakeItem(itemID)
+    if Helpers.photoPuppetComponent then
+        Helpers.photoPuppetComponent:PutOnFakeItem(itemID)
     end
 end
 
@@ -180,13 +193,24 @@ function Helpers.IsFemale()
     return res == true
 end
 
-function iter_table(t)
+local function iter_list(list)
+    return function (cb)
+        local item = table.remove(list, 1)
+        if item ~= nil then
+            cb(item)
+            return true
+        end
+        return false
+    end
+end
+
+local function iter_table(table)
     local keys = {}
-    for k, _ in pairs(t) do table.insert(keys, k) end
+    for k, _ in pairs(table) do table.insert(keys, k) end
     return function (cb)
         local key = table.remove(keys, 1)
         if key ~= nil then
-            cb(t[key])
+            cb(table[key])
             return true
         end
         return false
@@ -199,16 +223,89 @@ function UnequipAll()
     end
 end
 
+local slotsPriorities = {
+    HEAD = 0,
+    FACE = 1,
+    EYES = 2,
+    OUTFIT = 3,
+    OUTERCHEST = 4,
+    TORSO = 5,
+    INNERCHEST = 6,
+    CHEST = 7,
+    FEET = 8,
+    LEGS = 9,
+    UNDERWEARTOP = 10,
+    UNDERWEARBOTTOM = 11
+}
+
+-- Remove empty attachment slots
+function FilterAndSortUsedAttachmentSlotsList(slotsList)
+    local usedAttachmentSlots = {}
+
+    for index, item in ipairs(slotsList) do
+        local key = item["key"]
+        local value = item["value"]
+
+        local alt_name = "UNDEFINED"
+
+        if value == AttachmentSlot.FACE then alt_name = AttachmentSlot.EYES end
+        if value == AttachmentSlot.OUTERCHEST then alt_name = AttachmentSlot.TORSO end
+        if value == AttachmentSlot.INNERCHEST then alt_name = AttachmentSlot.CHEST end
+        if value == AttachmentSlot.EYES then alt_name = AttachmentSlot.FACE end
+        if value == AttachmentSlot.TORSO then alt_name = AttachmentSlot.OUTERCHEST end
+        if value == AttachmentSlot.CHEST then alt_name = AttachmentSlot.INNERCHEST end
+
+        local hasItem = (GetItemIDInSlot(value) ~= nil)
+            or (GetItemIDInSlotOfPuppet(value) ~= nil)
+            or (GetItemIDInSlot(alt_name) ~= nil)
+            or (GetItemIDInSlotOfPuppet(alt_name) ~= nil)
+        if hasItem then
+            table.insert(usedAttachmentSlots, item)
+        end
+    end
+
+    -- move underwear to the end
+    table.sort(usedAttachmentSlots, function (left, right)
+        return slotsPriorities[left.key:upper()] < slotsPriorities[right.key:upper()]
+    end)
+
+    return usedAttachmentSlots
+end
+
+function TableToList(t)
+    local outputList = {}
+    for key, value in pairs(t) do
+        table.insert(outputList, { key = key, value = value })
+    end
+    return outputList
+end
+
+function SortOutfitSet(outfitSet)
+    table.sort(outfitSet, function (left, right)
+        return slotsPriorities[left.key:upper()] > slotsPriorities[right.key:upper()]
+    end)
+
+    return outfitSet
+end
+
 function RequestUnequipAll()
     Helpers.ResetLastClothing()
 
-    Helpers.UnequipAllIter = iter_table(AttachmentSlot)
+    local usedAttachmentSlots = FilterAndSortUsedAttachmentSlotsList(TableToList(AttachmentSlot))
+
+    if #usedAttachmentSlots > 0 then
+        Helpers.UnequipAllIter = iter_list(usedAttachmentSlots)
+    end
+
 end
 
 function RequestEquipAll(outfitSet)
     Helpers.ResetLastClothing()
 
-    Helpers.EquipAllIter = iter_table(outfitSet)
+    local list = SortOutfitSet(TableToList(outfitSet))
+    if #list > 0 then
+        Helpers.EquipAllIter = iter_list(list)
+    end
 end
 
 function Helpers.ApplyOutfit(outfit)
