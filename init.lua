@@ -291,6 +291,7 @@ function Wardrobe:Init()
         local isDressing = Helpers.EquipAllIter ~= nil
 
         local canToggleClothing = (GetEngineTime() - lastToggled) >= 0.5
+        local canToggleClothing = math.abs((GetEngineTime() - lastToggled)) >= 0.5
         local function hasItemInSlot(slot)
             return GetItemIDInSlot(slot) ~= nil
         end
