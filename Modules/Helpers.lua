@@ -390,16 +390,12 @@ function Helpers.ApplyOutfit(outfit)
     if #missingItemsTDBIDs > 0 then
       if Config.data.autoTransfer then
         local failedToTransferTDBIDs = StashTransfer(missingItemsTDBIDs, false)
-        print("failedToTransferTDBIDs:")
-        print(#failedToTransferTDBIDs)
         if #failedToTransferTDBIDs > 0 then
           if Config.data.autoSpawn then
-            print("falling back to spawning")
             SpawnItems(failedToTransferTDBIDs)
           end
         end
       elseif Config.data.autoSpawn then
-        print("transfer is disabled. spawning.")
         SpawnItems(missingItemsTDBIDs)
       end
     end
