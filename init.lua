@@ -1,4 +1,4 @@
-local Wardrobe = { version = "1.5.1" }
+local Wardrobe = { version = "1.6.1" }
 
 --[[
 TODO:
@@ -160,6 +160,12 @@ function Wardrobe:Init()
       --         Helpers.stashEntity = Game.FindEntityByID(self:GetEntityID())
       --     end
       -- end)
+
+      -- don't auto equip underpants
+      Override("EquipmentSystemPlayerData", "IsUnderwearHidden", function(_) return true end)
+      -- don't auto equip bra
+      Override("EquipmentSystemPlayerData", "EvaluateUnderwearTopHiddenState", function(_) return true end)
+
 
       Observe("gameuiMenuItemListGameController", "OnInitialize", function()
         isInMenu = true

@@ -1,5 +1,11 @@
 return {
   {
+    version = "1.6.1",
+    changes = {
+      'Fix: "Underwear will be toggled properly now"',
+    }
+  },
+  {
     version = "1.6.0",
     changes = {
       "Feature: Spawn or transfer from the stash missing items",
