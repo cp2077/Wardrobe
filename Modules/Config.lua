@@ -6,7 +6,9 @@ local Config = {
     },
     autoSpawn = false,
     autoTransfer = true,
-    outfits = {}
+    outfits = {},
+    groups = {},
+    quickAccess = {},
   }
 }
 
@@ -37,6 +39,14 @@ function Migrate()
 
   if Config.data.autoSpawn == nil then
     Config.data.autoSpawn = false
+  end
+
+  if Config.data.groups == nil then
+    Config.data.groups = {}
+  end
+
+  if Config.data.quickAccess == nil then
+    Config.data.quickAccess = {}
   end
 end
 

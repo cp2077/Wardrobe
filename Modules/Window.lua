@@ -50,6 +50,8 @@ function Window.Draw(
   onOutfitSave,
   onOutfitDelete,
   onOutfitMove,
+  onQuickAccessOutfitSave,
+  onQuickAccessOutfitLoad,
   onUnlockEveryItem,
   onSlotTakeOff,
   onToggleUnderwear,
@@ -74,7 +76,7 @@ function Window.Draw(
   ImGui.PushStyleColor(ImGuiCol.FrameBg, 0.25, 0.35, 0.45, 0.8)
   ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 0.0)
   ImGui.PushStyleVar(ImGuiStyleVar.ScrollbarSize, SCROLLBAR_SIZE)
-  ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, 450, 284)
+  ImGui.PushStyleVar(ImGuiStyleVar.WindowMinSize, 450, 384)
 
   ImGui.PushStyleColor(ImGuiCol.Tab, 0.25, 0.35, 0.45, 0.45)
   ImGui.PushStyleColor(ImGuiCol.TabHovered, 0.35, 0.45, 0.55, 1.0)
@@ -119,7 +121,7 @@ function Window.Draw(
     NewLine(2)
     ImGui.TextWrapped("Changelog")
     NewLine(1)
-    ImGui.BeginChild('ChangeLog', 433, 200)
+    ImGui.BeginChild('ChangeLog', 433, 300)
     for _, log in pairs(Changelog) do
       ImGui.TextWrapped(" - " .. log.version)
       ImGui.PushStyleColor(ImGuiCol.Separator, 1, 1, 1, 0)
@@ -173,7 +175,7 @@ function Window.Draw(
       ImGui.Separator()
       ImGui.PopStyleColor()
 
-      ImGui.BeginChild('WardrobeList', 433, 170)
+      ImGui.BeginChild('WardrobeList', 433, 270)
 
       local hasScrollBar = ImGui.GetScrollMaxY() > 0
 
@@ -297,6 +299,51 @@ function Window.Draw(
           end
         end
       end
+      ImGui.EndChild()
+      ImGui.BeginChild('WardrobeQuickAccess', 433, 20)
+      for var=1,4 do
+        ImGui.PushStyleColor(ImGuiCol.Button, 0.60, 0.20, 0.30, 0.8)
+        ImGui.PushStyleColor(ImGuiCol.ButtonHovered, 0.70, 0.20, 0.30, 1.0)
+        ImGui.PushStyleColor(ImGuiCol.ButtonActive, 0.70, 0.20, 0.30, 0.5)
+        ImGui.PushID(("save_qa_btn" .. tostring(var)))
+        if ImGui.Button('S' .. tostring(var)) then
+          onQuickAccessOutfitSave(var)
+        end
+        ImGui.PopID()
+        HoverTooltip("Save quick access outfit. (See CET->Bindings for a shortcut)")
+        ImGui.PopStyleColor(3)
+
+        ImGui.SameLine()
+        if not Config.data.quickAccess[tostring(var)] then
+          DisableButton()
+        end
+        ImGui.PushID(("load_qa_btn" .. tostring(var)))
+        if ImGui.Button('L' .. tostring(var)) then
+          if Config.data.quickAccess[tostring(var)] then
+            onQuickAccessOutfitLoad(var)
+          end
+        end
+        ImGui.PopID()
+        if not Config.data.quickAccess[tostring(var)] then
+          UndisableButton()
+        end
+
+        HoverTooltip("Load quick access outfit. (See CET->Bindings for a shorcut)")
+
+        ImGui.SameLine()
+        ImGui.Spacing(1)
+        ImGui.SameLine()
+      end
+
+      -- ImGui.PushID(("load_qa_btn_latest" .. tostring(5)))
+      -- if ImGui.Button('Load latest ') then
+      --   if Config.data.quickAccess["5"] then
+      --     onQuickAccessOutfitLoad(5)
+      --   end
+      -- end
+      -- ImGui.PopID()
+      -- HoverTooltip("Load quick access outfit. (See CET->Bindings for a shorcut)")
+
       ImGui.EndChild()
       ImGui.EndTabItem()
     end

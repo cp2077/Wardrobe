@@ -1,5 +1,12 @@
 return {
   {
+    version = "1.7.0",
+    changes = {
+      ' Feature: Quick access outfits for fast switching',
+      ' Fix: Potential stability improvements'
+    }
+  },
+  {
     version = "1.6.1",
     changes = {
       'Fix: "Underwear will be toggled properly now"',
