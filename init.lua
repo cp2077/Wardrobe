@@ -1,4 +1,4 @@
-local Wardrobe = { version = "1.7.0" }
+local Wardrobe = { version = "1.8.0" }
 
 --[[
 TODO:
@@ -203,11 +203,12 @@ function Wardrobe:Init()
     -- end)
 
     -- don't auto equip underpants
-    Override("EquipmentSystemPlayerData", "IsUnderwearHidden", function(_) return true end)
+    -- Override("EquipmentSystemPlayerData", "IsUnderwearHidden", function(_) return true end)
     -- don't auto equip bra
     Override("EquipmentSystemPlayerData", "EvaluateUnderwearTopHiddenState", function(_) return true end)
 
-
+    -- Override("EquipmentSystemPlayerData", "IsBuildCensored", function() return true end)
+    
     Observe("gameuiMenuItemListGameController", "OnInitialize", function()
       isInMenu = true
     end)
@@ -223,7 +224,7 @@ function Wardrobe:Init()
       SetReady(true)
     end)
 
-    Observe('PhotoModePlayerEntityComponent', 'ListAllItems', function(self)
+    Observe('PhotoModePlayerEntityComponent', 'ListAllCurrentItems', function(self)
       Helpers.photoPuppet = self.fakePuppet
       Helpers.photoPuppetComponent = self
       SetReady(true)
@@ -242,16 +243,15 @@ function Wardrobe:Init()
     Config.InitConfig()
     isInited = true
 
+    local function msg()
+      ShowMessage("Outfit has been changed")
+    end
 
-    Cron.Every(0.14, function()
+    Cron.Every(0.12, function()
       if not IsReady() then
         return
       end
 
-      local function msg()
-        ShowMessage("Outfit has been changed")
-      end
-      -- Cron.Every(0.13, function()
       if Helpers.UnequipAllIter ~= nil then
         local called =  Helpers.UnequipAllIter(function(item)
           local name = item.key

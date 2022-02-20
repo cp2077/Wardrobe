@@ -1,5 +1,11 @@
 return {
   {
+    version = "1.8.0",
+    changes = {
+      ' - v1.5 support',
+    }
+  },
+  {
     version = "1.7.0",
     changes = {
       ' Feature: Quick access outfits for fast switching',

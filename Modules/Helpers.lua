@@ -151,9 +151,9 @@ function Helpers.UnequipSlot(slotName)
 end
 
 function Helpers.EquipItem(itemID)
-  Game.GetScriptableSystemsContainer():Get(CName.new("EquipmentSystem")):GetPlayerData(Game.GetPlayer()):EquipItem(itemID, false, false, false)
+  Game.GetScriptableSystemsContainer():Get(CName.new("EquipmentSystem")):GetPlayerData(Game.GetPlayer()):EquipItem(itemID, false, false)
   if Helpers.photoPuppetComponent then
-    Helpers.photoPuppetComponent:PutOnFakeItem(itemID)
+    Helpers.photoPuppetComponent:PutOnFakeItemFromMainPuppet(itemID)
   end
 end
 
