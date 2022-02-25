@@ -1,5 +1,11 @@
 return {
   {
+    version = "1.8.1",
+    changes = {
+      ' - Removed "Outfit has been changed" message for now due to a bug',
+    }
+  },
+  {
     version = "1.8.0",
     changes = {
       ' - v1.5 support',

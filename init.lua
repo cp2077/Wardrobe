@@ -1,4 +1,4 @@
-local Wardrobe = { version = "1.8.0" }
+local Wardrobe = { version = "1.8.1" }
 
 --[[
 TODO:
@@ -244,7 +244,7 @@ function Wardrobe:Init()
     isInited = true
 
     local function msg()
-      ShowMessage("Outfit has been changed")
+      -- ShowMessage("Outfit has been changed")
     end
 
     Cron.Every(0.12, function()
