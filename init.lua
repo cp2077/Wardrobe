@@ -1,4 +1,4 @@
-local Wardrobe = { version = "1.8.1" }
+local Wardrobe = { version = "1.8.2" }
 
 --[[
 TODO:
@@ -257,7 +257,14 @@ function Wardrobe:Init()
           local name = item.key
           local slot = item.value
 
-          Helpers.UnequipSlot(slot)
+          if slot == "Eyes" or slot == "Chest" or slot == "Torso" then
+            if Helpers.photoPuppet ~= nil then
+              Helpers.UnequipSlot(slot, true)
+            end
+          else
+            Helpers.UnequipSlot(slot)
+          end
+      
         end)
         if not called then
           if Helpers.EquipAllIter == nil then

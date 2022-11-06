@@ -66,17 +66,34 @@ function Helpers.ToggleClothing(slot, slot_alt_name)
 
   if not hasSavedClothing or hasClothingInSlot then
     local itemInSlot = GetItemIDInSlot(slot) or GetItemIDInSlot(slot_alt_name)
-    Helpers.UnequipSlot(slot)
-    Helpers.UnequipSlot(slot_alt_name)
+    if Helpers.photoPuppet ~= nil then
+      Helpers.UnequipSlot(slot_alt_name, true)
+      Helpers.UnequipSlot(slot)
+    else
+      Helpers.UnequipSlot(slot)
+    end
+    -- if slot_alt_name ~= "UNDEFINED" then
+    -- end
     if itemInSlot ~= nil then
       LastClothing[slot] = itemInSlot
       LastClothing[slot_alt_name] = itemInSlot
-      Helpers.UnequipSlot(slot)
-      Helpers.UnequipSlot(slot_alt_name)
+      if Helpers.photoPuppet ~= nil then
+        Helpers.UnequipSlot(slot_alt_name, true)
+        Helpers.UnequipSlot(slot)
+      else
+        Helpers.UnequipSlot(slot)
+      end
+      -- if slot_alt_name ~= "UNDEFINED" then
+      --   Helpers.UnequipSlot(slot_alt_name)
+      -- end
     end
   else
-    Helpers.EquipItem(LastClothing[slot])
-    Helpers.EquipItem(LastClothing[slot_alt_name])
+    if Helpers.photoPuppet ~= nil then
+      Helpers.EquipItem(LastClothing[slot_alt_name], true)
+      Helpers.EquipItem(LastClothing[slot])
+    else
+      Helpers.EquipItem(LastClothing[slot])
+    end
     LastClothing[slot] = nil
     LastClothing[slot_alt_name] = nil
   end
@@ -140,8 +157,13 @@ function DeserializeTweakDB(tweakDBIDTable)
   return customTDBID
 end
 
-function Helpers.UnequipSlot(slotName)
-  Game.UnequipItem(slotName, "0")
+function Helpers.UnequipSlot(slotName, puppetOnly)
+  if puppetOnly == nil then
+    puppetOnly = false
+  end
+  if not puppetOnly then
+    Game.UnequipItem(slotName, "0")
+  end
   if Helpers.photoPuppet then
     local itemID = GetItemIDInSlotOfPuppet(slotName)
     if itemID then
@@ -150,8 +172,16 @@ function Helpers.UnequipSlot(slotName)
   end
 end
 
-function Helpers.EquipItem(itemID)
-  Game.GetScriptableSystemsContainer():Get(CName.new("EquipmentSystem")):GetPlayerData(Game.GetPlayer()):EquipItem(itemID, false, false)
+
+
+function Helpers.EquipItem(itemID, puppetOnly)
+  if puppetOnly == nil then
+    puppetOnly = false
+  end
+  
+  if not puppetOnly then
+    Game.GetScriptableSystemsContainer():Get(CName.new("EquipmentSystem")):GetPlayerData(Game.GetPlayer()):EquipItem(itemID, false, false)
+  end
   if Helpers.photoPuppetComponent then
     Helpers.photoPuppetComponent:PutOnFakeItemFromMainPuppet(itemID)
   end
@@ -282,7 +312,13 @@ end
 
 function UnequipAll()
   for _, slotName in pairs(AttachmentSlot) do
-    Helpers.UnequipSlot(slotName)
+    if slotName == "Eyes" or slotName == "Chest" or slotName == "Torso" then
+      if Helpers.photoPuppet ~= nil then
+        Helpers.UnequipSlot(slotName, true)
+      end
+    else
+      Helpers.UnequipSlot(slotName)
+    end
   end
 end
 

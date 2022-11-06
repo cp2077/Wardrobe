@@ -1,5 +1,11 @@
 return {
   {
+    version = "1.8.2",
+    changes = {
+      ' Fixed main weapon being unequipped during outfit switch',
+    }
+  },
+  {
     version = "1.8.1",
     changes = {
       ' - Removed "Outfit has been changed" message for now due to a bug',

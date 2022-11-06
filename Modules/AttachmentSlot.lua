@@ -4,13 +4,13 @@ local AttachmentSlot = {
   OUTFIT = "Outfit",
   HEAD = "Head",
   FACE = "Face",
-  EYES = "Eyes",
+  EYES = "Eyes", -- photomode
   INNERCHEST = "InnerChest",
   OUTERCHEST = "OuterChest",
   UNDERWEARTOP = "UnderwearTop",
   UNDERWEARBOTTOM = "UnderwearBottom",
-  CHEST = "Chest",
-  TORSO = "Torso",
+  CHEST = "Chest", -- photomode
+  TORSO = "Torso", -- photomode
 }
 
 return AttachmentSlot
