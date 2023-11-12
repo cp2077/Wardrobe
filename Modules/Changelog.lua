@@ -1,6 +1,6 @@
 return {
   {
-    version = "1.8.3",
+    version = "1.9.0",
     changes = {
       ' - 2.0 support',
     }
