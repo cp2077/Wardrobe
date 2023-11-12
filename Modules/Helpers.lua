@@ -8,6 +8,7 @@ local Helpers = {
   stashEntity = nil,
   photoPuppet = nil,
   photoPuppetComponent = nil,
+  photoModeMenuController = nil
 }
 
 function GetUnderwearBottom()
@@ -67,10 +68,12 @@ function Helpers.ToggleClothing(slot, slot_alt_name)
   if not hasSavedClothing or hasClothingInSlot then
     local itemInSlot = GetItemIDInSlot(slot) or GetItemIDInSlot(slot_alt_name)
     if Helpers.photoPuppet ~= nil then
-      Helpers.UnequipSlot(slot_alt_name, true)
+      Helpers.UnequipSlot(slot_alt_name)
       Helpers.UnequipSlot(slot)
     else
+      Helpers.UnequipSlot(slot_alt_name)
       Helpers.UnequipSlot(slot)
+
     end
     -- if slot_alt_name ~= "UNDEFINED" then
     -- end
@@ -78,10 +81,12 @@ function Helpers.ToggleClothing(slot, slot_alt_name)
       LastClothing[slot] = itemInSlot
       LastClothing[slot_alt_name] = itemInSlot
       if Helpers.photoPuppet ~= nil then
-        Helpers.UnequipSlot(slot_alt_name, true)
+        Helpers.UnequipSlot(slot_alt_name)
         Helpers.UnequipSlot(slot)
       else
         Helpers.UnequipSlot(slot)
+        Helpers.UnequipSlot(slot_alt_name)
+
       end
       -- if slot_alt_name ~= "UNDEFINED" then
       --   Helpers.UnequipSlot(slot_alt_name)
@@ -89,7 +94,7 @@ function Helpers.ToggleClothing(slot, slot_alt_name)
     end
   else
     if Helpers.photoPuppet ~= nil then
-      Helpers.EquipItem(LastClothing[slot_alt_name], true)
+      Helpers.EquipItem(LastClothing[slot_alt_name])
       Helpers.EquipItem(LastClothing[slot])
     else
       Helpers.EquipItem(LastClothing[slot])
@@ -111,6 +116,11 @@ function Helpers.PutOnBra()
     ts:GiveItem(Game.GetPlayer(), underwear, 1)
   end
   Helpers.EquipItem(underwear)
+end
+
+function Helpers.RemoveUnderwearTop()
+  -- local underwearBottom = ItemID.CreateQuery("Items.Underwear_Basic_01_Bottom")
+  local underwearTop = ItemID.CreateQuery("Items.Underwear_Basic_01_Top")
 end
 
 function Helpers.ToggleUnderwear(slot)
@@ -161,13 +171,22 @@ function Helpers.UnequipSlot(slotName, puppetOnly)
   if puppetOnly == nil then
     puppetOnly = false
   end
+  local itemID = GetItemIDInSlot(slotName)
   if not puppetOnly then
-    Game.UnequipItem(slotName, "0")
+    
+    Game.GetScriptableSystemsContainer():Get(CName.new("EquipmentSystem")):GetPlayerData(Game.GetPlayer()):UnequipItem(itemID)
   end
   if Helpers.photoPuppet then
-    local itemID = GetItemIDInSlotOfPuppet(slotName)
+    pcall(function()
+      Helpers.photoModeMenuController:OnAttributeOptionSelected(3301, option)
+    end)
     if itemID then
-      Game.GetTransactionSystem():RemoveItem(Helpers.photoPuppet, itemID, 1)
+      local currSlot = EquipmentSystem.GetPlacementSlot(itemID)
+      Game.GetTransactionSystem():RemoveItemFromSlot(Helpers.photoPuppet, currSlot)
+
+      local previewID = Game.GetTransactionSystem():CreatePreviewItemID(itemID)
+      Game.GetTransactionSystem():RemoveItem(Helpers.photoPuppet, previewID, 1)
+      
     end
   end
 end
@@ -312,13 +331,7 @@ end
 
 function UnequipAll()
   for _, slotName in pairs(AttachmentSlot) do
-    if slotName == "Eyes" or slotName == "Chest" or slotName == "Torso" then
-      if Helpers.photoPuppet ~= nil then
-        Helpers.UnequipSlot(slotName, true)
-      end
-    else
-      Helpers.UnequipSlot(slotName)
-    end
+    Helpers.UnequipSlot(slotName)
   end
 end
 
@@ -390,7 +403,7 @@ end
 function RequestUnequipAll()
   Helpers.ResetLastClothing()
 
-  local usedAttachmentSlots = FilterAndSortUsedAttachmentSlotsList(TableToList(AttachmentSlot))
+  local usedAttachmentSlots = TableToList(AttachmentSlot)
 
   if #usedAttachmentSlots > 0 then
     Helpers.UnequipAllIter = iter_list(usedAttachmentSlots)

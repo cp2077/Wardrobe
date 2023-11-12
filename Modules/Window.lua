@@ -62,7 +62,8 @@ function Window.Draw(
   isReady,
   isInInventory,
   isInMenu,
-  canToggleClothing
+  canToggleClothing,
+  canEquip
   )
 
   ImGui.PushStyleColor(ImGuiCol.Border, 0, 0, 0, 0)
@@ -95,13 +96,6 @@ function Window.Draw(
 
   function NewLine(n)
     for _=1,n do ImGui.Text("") end
-  end
-
-  if isInInventory then
-    NewLine(1)
-    ImGui.SameLine(math.max(0, windowWidth / 2 - msgInvSizeX/2))
-    ImGui.TextWrapped(MSG_DOESNT_WORK_INV)
-    NewLine(1)
   end
 
   if isInMenu then
@@ -227,7 +221,7 @@ function Window.Draw(
             ImGui.SameLine()
 
             -- "Select" Button
-            if isInInventory then
+            if not canEquip then
               ImGui.PushStyleColor(ImGuiCol.Button, 0.40, 0.40, 0.40, 0.8)
               ImGui.PushStyleColor(ImGuiCol.Text, 0.50, 0.50, 0.50, 0.8)
               ImGui.PushStyleColor(ImGuiCol.ButtonActive, 0.40, 0.40, 0.40, 0.8)
@@ -238,14 +232,14 @@ function Window.Draw(
 
             local selectOutfitText = " Select "
 
-            if hasMissingItems and not isInInventory then
+            if hasMissingItems and canEquip then
               ImGui.PushStyleColor(ImGuiCol.Button, 0.60, 0.30, 0.05, 1.0)
             end
 
-            if ImGui.Button(selectOutfitText) and not isInInventory then
+            if ImGui.Button(selectOutfitText) and canEquip then
               onOutfitSelected(outfit)
             end
-            if hasMissingItems and not isInInventory then
+            if hasMissingItems and canEquip then
               if not autoSpawn and autoTransfer then
                 HoverTooltip('Some items are missing!\n\nTransfer from stash is enabled.')
                 elseif autoSpawn and not autoTransfer then
@@ -257,7 +251,7 @@ function Window.Draw(
               end
             end
 
-            if hasMissingItems and not isInInventory then
+            if hasMissingItems and canEquip then
               ImGui.PopStyleColor(1)
             end
 
@@ -266,7 +260,7 @@ function Window.Draw(
               HoverTooltip("Put outfit on")
             end
 
-            if isInInventory then
+            if not canEquip then
               ImGui.PopStyleColor(4)
             end
             ImGui.SameLine()
@@ -300,7 +294,7 @@ function Window.Draw(
         end
       end
       ImGui.EndChild()
-      ImGui.BeginChild('WardrobeQuickAccess', 433, 20)
+      ImGui.BeginChild('WardrobeQuickAccess', 433, 30)
       for var=1,4 do
         ImGui.PushStyleColor(ImGuiCol.Button, 0.60, 0.20, 0.30, 0.8)
         ImGui.PushStyleColor(ImGuiCol.ButtonHovered, 0.70, 0.20, 0.30, 1.0)
@@ -357,15 +351,15 @@ function Window.Draw(
 
 
       local listSlotsNames = {
-        [AttachmentSlot.HEAD] = "Hat",
-        [AttachmentSlot.FACE] = "Accessory",
-        [AttachmentSlot.OUTERCHEST] = "Jacket",
-        [AttachmentSlot.INNERCHEST] = "Top",
-        [AttachmentSlot.LEGS] = "Pants",
-        [AttachmentSlot.FEET] = "Shoes",
-        [AttachmentSlot.UNDERWEARBOTTOM] = "Underpants",
-        [AttachmentSlot.UNDERWEARTOP] = "Bra",
-        [AttachmentSlot.OUTFIT] = "Suit",
+        [AttachmentSlot.HEAD] = "Head",
+        [AttachmentSlot.FACE] = "Face",
+        [AttachmentSlot.OUTERCHEST] = "Outer Torso",
+        [AttachmentSlot.INNERCHEST] = "Inner Torso",
+        [AttachmentSlot.LEGS] = "Legs",
+        [AttachmentSlot.FEET] = "Feet",
+        [AttachmentSlot.UNDERWEARBOTTOM] = "Underwear Bottom",
+        [AttachmentSlot.UNDERWEARTOP] = "Underwear Top",
+        [AttachmentSlot.OUTFIT] = "Outfit",
       }
       local listSlots = {
         { AttachmentSlot.HEAD, nil }, { AttachmentSlot.FACE, AttachmentSlot.EYES },

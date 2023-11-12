@@ -181,6 +181,7 @@ local isOverlayOpen = false
 local isInInventory = false
 local isInMenu = false
 
+local lastEquipped = 0
 function Wardrobe:Init()
   registerForEvent("onInit", function()
     GameSession.OnStart(function()
@@ -209,6 +210,7 @@ function Wardrobe:Init()
 
     -- Override("EquipmentSystemPlayerData", "IsBuildCensored", function() return true end)
     
+    Override("EquipmentSystemPlayerData", "OnUnderwearEquipFailsafe", function() end)
     Observe("gameuiMenuItemListGameController", "OnInitialize", function()
       isInMenu = true
     end)
@@ -230,9 +232,19 @@ function Wardrobe:Init()
       SetReady(true)
     end)
 
+    Observe('PhotoModePlayerEntityComponent', 'ListAllCurrentItems', function(self)
+      Helpers.photoPuppet = self.fakePuppet
+      Helpers.photoPuppetComponent = self
+      SetReady(true)
+    end)
+
     Observe('gameuiPhotoModeMenuController', 'OnHide', function()
       Helpers.photoPuppet = nil
       Helpers.photoPuppetComponent = nil
+      SetReady(true)
+    end)
+    Observe('gameuiPhotoModeMenuController', 'OnShow', function(self)
+      Helpers.photoModeMenuController = self
       SetReady(true)
     end)
 
@@ -247,6 +259,7 @@ function Wardrobe:Init()
       -- ShowMessage("Outfit has been changed")
     end
 
+
     Cron.Every(0.12, function()
       if not IsReady() then
         return
@@ -257,18 +270,23 @@ function Wardrobe:Init()
           local name = item.key
           local slot = item.value
 
-          if slot == "Eyes" or slot == "Chest" or slot == "Torso" then
-            if Helpers.photoPuppet ~= nil then
-              Helpers.UnequipSlot(slot, true)
-            end
-          else
-            Helpers.UnequipSlot(slot)
+          local alt_name = slot
+          if slot == "InnerChest" then
+            alt_name = "Chest"
           end
-      
+          if slot == "OuterChest" then
+            alt_name = "Torso"
+          end
+          if slot == "Chest" then
+            alt_name = "InnerChest"
+          end
+          Helpers.UnequipSlot(slot)
+          Helpers.UnequipSlot(alt_name)
         end)
         if not called then
           if Helpers.EquipAllIter == nil then
             msg()
+            lastEquipped = GetEngineTime()
           end
           Helpers.UnequipAllIter = nil
         end
@@ -291,10 +309,12 @@ function Wardrobe:Init()
         if not called then
           Helpers.EquipAllIter = nil
           msg()
+          lastEquipped = GetEngineTime()
         end
       end
-    end)
+    end, {})
   end)
+
   registerForEvent("onOverlayOpen", function () isOverlayOpen = true end)
   registerForEvent("onOverlayClose", function () isOverlayOpen = false end)
 
@@ -306,8 +326,25 @@ function Wardrobe:Init()
       return
     end
 
+    local function turnOffEquipmentEx()
+      pcall(function()
+        option = NewObject('gameuiPhotoModeOptionSelectorData')
+        option.optionText = GetLocalizedTextByKey("UI-Wardrobe-NoOutfit");
+        option.optionData = 3302;
+    
+        Helpers.photoModeMenuController:OnAttributeOptionSelected(3301, option)
+      end)
+
+      pcall(function()
+        EquipmentEx.Deactivate()
+      end)
+    end
+
     local function onOutfitSelected(outfit)
-      Helpers.ApplyOutfit(outfit)
+      turnOffEquipmentEx()
+
+      Cron.NextTick(function() Helpers.ApplyOutfit(outfit) end, {})
+      
       lastSearchString = nil
     end
 
@@ -328,14 +365,16 @@ function Wardrobe:Init()
     end
 
     local function onQuickAccessOutfitLoad(number)
+      turnOffEquipmentEx()
+
       local isUndressing = Helpers.UnequipAllIter ~= nil
       local isDressing = Helpers.EquipAllIter ~= nil
-
+      
       if isInInventory or not isInited or isInMenu or not isReady or isDressing or isUndressing then
         return
       end
 
-      ApplyOutfit(Config.data.quickAccess[tostring(number)])
+      Cron.NextTick(function() ApplyOutfit(Config.data.quickAccess[tostring(number)]) end, {})
     end
 
     local function onOutfitDelete(id)
@@ -348,13 +387,21 @@ function Wardrobe:Init()
     end
 
     local function onSlotTakeOff(slot, alt_name)
-      Helpers.ToggleClothing(slot, alt_name)
-      lastToggled = GetEngineTime()
+      turnOffEquipmentEx()
+
+      Cron.NextTick(function()
+        Helpers.ToggleClothing(slot, alt_name)
+        lastToggled = GetEngineTime()
+      end, {})
     end
 
     local function onToggleUnderwear(slot)
-      Helpers.ToggleUnderwear(slot)
-      lastToggled = GetEngineTime()
+      turnOffEquipmentEx()
+
+      Cron.NextTick(function()
+        Helpers.ToggleUnderwear(slot)
+        lastToggled = GetEngineTime()
+      end, {})
     end
 
 
@@ -366,6 +413,7 @@ function Wardrobe:Init()
     local isDressing = Helpers.EquipAllIter ~= nil
 
     local canToggleClothing = math.abs((GetEngineTime() - lastToggled)) >= 0.5
+    local canEquip = math.abs((GetEngineTime() - lastEquipped)) >= 1
     local function hasItemInSlot(slot)
       return GetItemIDInSlot(slot) ~= nil
     end
@@ -391,9 +439,10 @@ function Wardrobe:Init()
     isUndressing,
     isDressing,
     IsReady(),
-    isInInventory,
+    false,
     isInMenu,
-    canToggleClothing
+    canToggleClothing,
+    canEquip
     )
   end)
   registerForEvent('onUpdate', function(delta)
@@ -441,6 +490,10 @@ function Wardrobe:Init()
   --
   --   ApplyOutfit(Config.data.quickAccess["5"])
   -- end)
+
+  return {
+    Helpers = Helpers,
+  }
 end
 
 return Wardrobe:Init()

@@ -1,8 +1,14 @@
 return {
   {
+    version = "1.8.3",
+    changes = {
+      ' - 2.0 support',
+    }
+  },
+  {
     version = "1.8.2",
     changes = {
-      ' Fixed main weapon being unequipped during outfit switch',
+      ' - Fixed main weapon being unequipped during outfit switch',
     }
   },
   {
